@@ -10,38 +10,157 @@
     </style>
 </head>
 <body>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
 
-    <script>
-        const renderer = new THREE.WebGLRenderer();
-        renderer.setSize( window.innerWidth, window.innerHeight );
-        document.body.appendChild( renderer.domElement );
+<script>
+//For calculating xyz from lat and long:
+function LatLonXYZ(coords,radius){
+    let lon = coords[0];
+    let lat = coords[1];
+    let phi   = (90-lat)*(Math.PI/180);
+    let theta = (lon+180)*(Math.PI/180);
+    let x = -((radius) * Math.sin(phi)*Math.cos(theta));
+    let z = ((radius) * Math.sin(phi)*Math.sin(theta));
+    let y = ((radius) * Math.cos(phi));
+    return [x,y,z];
+}
+//Fetch the world poitn data from github: 
+fetch("https://raw.githubusercontent.com/LiamOsler/minijam/master/data/points.geojson")
+.then(response => {
+    return response.json();
+})
+.then(jsondata =>{
+    //Append render to document:
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize( window.innerWidth, window.innerHeight );
+    document.body.appendChild( renderer.domElement );
+    //Window resize event handler:
+    function onWindowResize(event) {
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+    }
 
-        const scene = new THREE.Scene();
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
+    const controls = new THREE.OrbitControls( camera, renderer.domElement );
+    camera.position.set( 10, 20, 30 );
+    controls.update();
 
-        const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
+    const axesHelper = new THREE.AxesHelper( 5 );
+    scene.add( axesHelper );
 
-        const controls = new THREE.OrbitControls( camera, renderer.domElement );
+    // pointData: corresponds to 
+    let pointData = jsondata;
+    let pointArr = [];
 
-        //controls.update() must be called after any manual changes to the camera's transform
-        camera.position.set( 0, 20, 100 );
-        controls.update();
-        
-        const geometry = new THREE.BoxGeometry();
-        const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-        const cube = new THREE.Mesh( geometry, material );
-        scene.add( cube );
 
-        camera.position.z = 5;
-
-        function animate() {
-            requestAnimationFrame( animate );
-            controls.update();
-
-            renderer.render( scene, camera );
+    const color = new THREE.Color();
+    const pointMaterial = new THREE.PointsMaterial( { size: 1, vertexColors: true } );
+    const pointGeometry = new THREE.BufferGeometry();
+    function setPointLocations(type){
+        if(type == "flat"){
+            for (let point of pointData.features){
+                const coordLatLon = point.geometry.coordinates;
+                const coordXZY = LatLonXYZ(coordLatLon, 100);
+                pointArr.push(coordXZY[0], coordXZY[1],coordXZY[2]);
+            }
+            pointGeometry.setAttribute( 'position', new THREE.Float32BufferAttribute( pointArr, 3 ) );
         }
-        animate();
-    </script>
+        if(type == "elevation"){
+
+        }
+    }
+
+    function changePointColors(type){
+        const colors = [];
+        console.log(pointData)
+        for (let point of pointData.features){
+            if(type == "default"){
+                switch(point.properties.mapcolor7){
+                    case 1: 
+                        color.setRGB(251/256, 8/256, 135/256);
+                        colors.push(color.r, color.g, color.b);
+                    break;
+                    case 2: 
+                        color.setRGB(49/256, 104/256, 142/256);
+                        colors.push(color.r, color.g, color.b);
+                    break;
+                    case 3: 
+                        color.setRGB(253/256, 231/256, 37/256);
+                        colors.push(color.r, color.g, color.b);
+                    break;
+                    case 4: 
+                        color.setRGB(188/256, 55/256, 84/256);
+                        colors.push(color.r, color.g, color.b);
+                    break;
+                    case 5: 
+                        color.setRGB(251/256, 55/256, 26/256);
+                        colors.push(color.r, color.g, color.b);
+                    break;
+                    case 6: 
+                        color.setRGB(237/256, 182/256, 26/256);
+                        colors.push(color.r, color.g, color.b);
+                    break;
+                    case 7: 
+                        color.setRGB(144/256, 215/256, 67/256);
+                        colors.push(color.r, color.g, color.b);
+                    break;
+                    default:
+                        color.setRGB(0,0,0);
+                        colors.push(color.r, color.g, color.b);
+                }
+            }
+            else if(type == "country"){
+                color.setRGB(1,1,1);
+                colors.push(color.r, color.g, color.b);
+            }
+            else if(type == "climate"){
+            
+            }
+            else if(type == "elevation"){
+                let elevation = point.properties.elevation /2000;
+
+                color.setRGB(elevation, Math.sqrt(elevation), Math.sqrt(elevation/2));
+                colors.push(color.r, color.g, color.b);
+
+            }
+        }
+        pointGeometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
+    }
+
+    function displayPoints(){
+        let pointObjs = new THREE.Points(pointGeometry, pointMaterial);
+        scene.add(pointObjs);
+    }
+
+    const geometry = new THREE.BoxGeometry();
+    const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+    const cube = new THREE.Mesh( geometry, material );
+    scene.add( cube );
+
+    
+    function animate() {
+        requestAnimationFrame( animate );
+        controls.update();
+        cube.rotation.x+=0.01;
+
+        renderer.render( scene, camera );
+    }
+
+    function init(){
+        window.addEventListener('resize', onWindowResize, false);
+        setPointLocations("flat");
+        changePointColors("elevation");
+        displayPoints();
+    }
+
+    init();
+    animate();
+    }
+);
+
+</script>
 </body>
 </html>
