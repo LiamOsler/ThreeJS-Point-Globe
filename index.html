@@ -5,162 +5,310 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
     <style>
-        body { margin: 0; }
+        body { 
+            margin: 0;
+            color: white;
+        }
+        
+        #three {
+            position: relative;
+            z-index: 0; 
+        }
+
+        #container {
+            position: relative;
+            z-index: 0;
+        }
+        
+        #three {
+            position: absolute;
+            z-index: 1;
+            cursor: none;
+        }
+
+        #overlay {
+            position: absolute;
+            z-index: 2;
+            width: 100%;
+            padding-left: 1em;
+        }
+
     </style>
 </head>
-<body>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+    <body>
+        <div id="container">
+            <div id="three"></div>
+            <div id="overlay">
+                <div class="container-fluid">
+                    <!-- Content here -->
+                    <div class = "row pt-4">
+                        <div class = "col-12">
+                            <div class="card text-white bg-dark" style="width: 18rem;">
+                                <div class="card-body">
+                                  <h5 class="card-title">Card title</h5>
+                                  <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
+                                  <a href="#" class="btn btn-light">Go somewhere</a>
+                                </div>
+                              </div>
+                        </div>
+                    </div>
+                </div>
 
-<script>
-//For calculating xyz from lat and long:
-function LatLonXYZ(coords,radius){
-    let lon = coords[0];
-    let lat = coords[1];
-    let phi   = (90-lat)*(Math.PI/180);
-    let theta = (lon+180)*(Math.PI/180);
-    let x = -((radius) * Math.sin(phi)*Math.cos(theta));
-    let z = ((radius) * Math.sin(phi)*Math.sin(theta));
-    let y = ((radius) * Math.cos(phi));
-    return [x,y,z];
-}
-//Fetch the world poitn data from github: 
-fetch("https://raw.githubusercontent.com/LiamOsler/minijam/master/data/points.geojson")
-.then(response => {
-    return response.json();
-})
-.then(jsondata =>{
-    //Append render to document:
-    const renderer = new THREE.WebGLRenderer();
-    renderer.setSize( window.innerWidth, window.innerHeight );
-    document.body.appendChild( renderer.domElement );
-    //Window resize event handler:
-    function onWindowResize(event) {
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-    }
+            </div>
+        </div>
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
-    const controls = new THREE.OrbitControls( camera, renderer.domElement );
-    camera.position.set( 10, 20, 30 );
-    controls.update();
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+        <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+        
+        <script>
+            const blackMaterial = new THREE.MeshStandardMaterial( {
+                color: 0x222222,
+                opacity: 1
+            });
 
-    const axesHelper = new THREE.AxesHelper( 5 );
-    scene.add( axesHelper );
+            const whiteMaterial = new THREE.MeshStandardMaterial( {
+                color: 0xffffff,
+                opacity: .1,
+                depthWrite: false
+            } );
 
-    // pointData: corresponds to 
-    let pointData = jsondata;
-    let pointArr = [];
-
-
-    const color = new THREE.Color();
-    const pointMaterial = new THREE.PointsMaterial( { size: 1, vertexColors: true } );
-    const pointGeometry = new THREE.BufferGeometry();
-    function setPointLocations(type){
-        if(type == "flat"){
-            for (let point of pointData.features){
-                const coordLatLon = point.geometry.coordinates;
-                const coordXZY = LatLonXYZ(coordLatLon, 100);
-                pointArr.push(coordXZY[0], coordXZY[1],coordXZY[2]);
+            //For calculating xyz from lat and long:
+            function LatLonXYZ(coords,radius){
+                let lon = coords[0];
+                let lat = coords[1];
+                let phi   = (90-lat)*(Math.PI/180);
+                let theta = (lon+180)*(Math.PI/180);
+                let x = -((radius) * Math.sin(phi)*Math.cos(theta));
+                let z = ((radius) * Math.sin(phi)*Math.sin(theta));
+                let y = ((radius) * Math.cos(phi));
+                return [x,y,z];
             }
-            pointGeometry.setAttribute( 'position', new THREE.Float32BufferAttribute( pointArr, 3 ) );
-        }
-        if(type == "elevation"){
+            //Fetch the world point data from github: 
+            fetch("https://raw.githubusercontent.com/LiamOsler/minijam/master/data/points.geojson")
+            .then(response => {
+                return response.json();
+            })
+            .then(jsondata =>{
+                //Basic scene and render setup, resize handler:
+                //Append render to document:
+                const renderer = new THREE.WebGLRenderer();
+                renderer.setSize( window.innerWidth, window.innerHeight );
+                document.body.appendChild( renderer.domElement );
 
-        }
-    }
 
-    function changePointColors(type){
-        const colors = [];
-        console.log(pointData)
-        for (let point of pointData.features){
-            if(type == "default"){
-                switch(point.properties.mapcolor7){
-                    case 1: 
-                        color.setRGB(251/256, 8/256, 135/256);
-                        colors.push(color.r, color.g, color.b);
-                    break;
-                    case 2: 
-                        color.setRGB(49/256, 104/256, 142/256);
-                        colors.push(color.r, color.g, color.b);
-                    break;
-                    case 3: 
-                        color.setRGB(253/256, 231/256, 37/256);
-                        colors.push(color.r, color.g, color.b);
-                    break;
-                    case 4: 
-                        color.setRGB(188/256, 55/256, 84/256);
-                        colors.push(color.r, color.g, color.b);
-                    break;
-                    case 5: 
-                        color.setRGB(251/256, 55/256, 26/256);
-                        colors.push(color.r, color.g, color.b);
-                    break;
-                    case 6: 
-                        color.setRGB(237/256, 182/256, 26/256);
-                        colors.push(color.r, color.g, color.b);
-                    break;
-                    case 7: 
-                        color.setRGB(144/256, 215/256, 67/256);
-                        colors.push(color.r, color.g, color.b);
-                    break;
-                    default:
-                        color.setRGB(0,0,0);
-                        colors.push(color.r, color.g, color.b);
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
+                const controls = new THREE.OrbitControls( camera, renderer.domElement );
+                controls.enablePan = false;
+                controls.maxDistance = 400;
+                controls.minDistance = 120;
+
+                camera.position.set( 0, 0, 150 );
+                controls.update();
+
+                const raycaster = new THREE.Raycaster();
+                const pointer = new THREE.Vector2();
+                
+
+                // pointData: corresponds to 
+                const pointDataImport = jsondata;
+                let pointData = jsondata;
+
+                console.log(pointData);
+
+                // for (let point of pointDataImport.features){
+                //     pointData.push(point);
+                // }
+                let pointArr = [];
+
+                const color = new THREE.Color();
+                const pointMaterial = new THREE.PointsMaterial( { size: 1, vertexColors: true } );
+                const pointGeometry = new THREE.BufferGeometry();
+                function setPointLocations(type){
+                    pointArr = [];
+                    if(type == "flat"){
+                        for (let point of pointData.features){
+                            const coordLatLon = point.geometry.coordinates;
+                            const coordXZY = LatLonXYZ(coordLatLon, 100 + 1);
+                            pointArr.push(coordXZY[0], coordXZY[1],coordXZY[2]);
+                        }
+                        pointGeometry.setAttribute( 'position', new THREE.Float32BufferAttribute( pointArr, 3 ) );
+                    }
+                    if(type == "elevation"){
+                        for(let point of pointData.features){
+                            const coordElevation = point.properties.elevation;
+                            const coordLatLon = point.geometry.coordinates;
+                            const coordXZY = LatLonXYZ(coordLatLon, 100 + coordElevation/1000);
+                            pointArr.push(coordXZY[0], coordXZY[1],coordXZY[2]);
+                        }
+                        pointGeometry.setAttribute( 'position', new THREE.Float32BufferAttribute( pointArr, 3 ) );
+                    }
+                }
+
+                function changePointColors(type){
+                    const colors = [];
+                    for (let point of pointData.features){
+                        if(type == "default"){
+                            switch(point.properties.mapcolor7){
+                                case 1: 
+                                    color.setRGB(253/256, 231/256, 37/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 2: 
+                                    color.setRGB(144/256, 215/256, 67/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 3: 
+                                    color.setRGB(53/256, 183/256, 121/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 4: 
+                                    color.setRGB(33/256, 145/256, 140/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 5: 
+                                    color.setRGB(49/256, 104/256, 142/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 6: 
+                                    color.setRGB(49/256, 104/256, 142/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 7: 
+                                    color.setRGB(68/256, 57/256, 131/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                default:
+                                    color.setRGB(0,0,0);
+                                    colors.push(color.r, color.g, color.b);
+                            }
+                        }
+                        else if(type == "country"){
+                            color.setRGB(1,1,1);
+                            colors.push(color.r, color.g, color.b);
+                        }
+                        else if(type == "climate"){
+                        
+                        }
+                        else if(type == "elevation"){
+                            let elevation = point.properties.elevation /2000;
+
+                            if(elevation > 0){
+                                color.setRGB(elevation+0.01, Math.sqrt(elevation)+0.3, Math.sqrt(elevation/2)+0.01);
+                            }
+                            else{
+                                color.setRGB(0, 1-Math.abs(elevation)/5, 1-Math.abs(elevation/10));
+                            }
+                            colors.push(color.r, color.g, color.b);
+                        }
+                    }
+                    pointGeometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
+                }
+
+                let pointObjs;
+                function displayPoints(){
+                    pointObjs = new THREE.Points(pointGeometry, pointMaterial);
+                    scene.add(pointObjs);
+                }
+
+                function removePoints(){
+                    scene.remove(pointObjs);
+                }
+
+
+                const geometry = new THREE.BoxGeometry();
+                const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+                const cube = new THREE.Mesh( geometry, material );
+                scene.add( cube );
+
+                const sphereGeometry = new THREE.SphereGeometry( 90, 24, 24 );
+                const backgroundSphere = new THREE.Mesh( sphereGeometry, blackMaterial );
+                scene.add( backgroundSphere );
+
+                const cursorGeometry = new THREE.SphereGeometry( 1 , 24, 24 );
+                const cursorSphere = new THREE.Mesh( cursorGeometry, whiteMaterial );
+                scene.add( cursorSphere );
+
+                const light = new THREE.AmbientLight( 0xffffff ); // soft white light
+                scene.add( light );
+
+
+                function raycast(){
+                    // update the picking ray with the camera and pointer position
+                    raycaster.setFromCamera( pointer, camera );
+
+                    // calculate objects intersecting the picking ray
+                    const intersections = raycaster.intersectObjects( scene.children );
+
+                    for(let intersect of intersections){
+                        // console.log(controls.getDistance());
+                        if(intersect.distance <controls.getDistance()-50){
+                            if(intersect.object.type == "Points"){
+                                let index = intersect.index;
+                                // console.log(intersect);
+                                cursorSphere.position.x = pointArr[index*3];
+                                cursorSphere.position.y = pointArr[index*3+1];
+                                cursorSphere.position.z = pointArr[index*3+2];
+
+                            }
+                        }
+
+                    }
+                    renderer.render( scene, camera );
+                }
+
+                
+                function animate() {
+                    requestAnimationFrame( animate );
+                    controls.update();
+                    cube.rotation.x++;
+                    raycast();
+                    // if(cube.rotation.x == 100){
+                    //     removePoints();
+                    //     setPointLocations("flat");
+                    //     changePointColors("elevation");
+                    //     displayPoints();
+                    // }
+
+                        removePoints();
+                        setPointLocations("elevation");
+                        changePointColors("elevation");
+                        displayPoints();
+                    
+
+                    renderer.render( scene, camera );
+                }
+
+                function init(){
+                    window.addEventListener('resize', onWindowResize, false);
+                    window.addEventListener( 'pointermove', onPointerMove );
+                    setPointLocations("elevation");
+                    changePointColors("elevation");
+                    displayPoints();
+                }
+
+                init();
+                animate();
+
+                //Window resize event handler:
+                function onWindowResize(event) {
+                    renderer.setSize(window.innerWidth, window.innerHeight);
+                    camera.aspect = window.innerWidth / window.innerHeight;
+                    camera.updateProjectionMatrix();
+                }
+
+                function onPointerMove( event ) {
+                    pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+                    pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
                 }
             }
-            else if(type == "country"){
-                color.setRGB(1,1,1);
-                colors.push(color.r, color.g, color.b);
-            }
-            else if(type == "climate"){
-            
-            }
-            else if(type == "elevation"){
-                let elevation = point.properties.elevation /2000;
+            );
+        </script>
 
-                color.setRGB(elevation, Math.sqrt(elevation), Math.sqrt(elevation/2));
-                colors.push(color.r, color.g, color.b);
-
-            }
-        }
-        pointGeometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
-    }
-
-    function displayPoints(){
-        let pointObjs = new THREE.Points(pointGeometry, pointMaterial);
-        scene.add(pointObjs);
-    }
-
-    const geometry = new THREE.BoxGeometry();
-    const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-    const cube = new THREE.Mesh( geometry, material );
-    scene.add( cube );
-
-    
-    function animate() {
-        requestAnimationFrame( animate );
-        controls.update();
-        cube.rotation.x+=0.01;
-
-        renderer.render( scene, camera );
-    }
-
-    function init(){
-        window.addEventListener('resize', onWindowResize, false);
-        setPointLocations("flat");
-        changePointColors("elevation");
-        displayPoints();
-    }
-
-    init();
-    animate();
-    }
-);
-
-</script>
-</body>
+        <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/popper.js@1.14.7/dist/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    </body>
 </html>
