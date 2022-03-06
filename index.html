@@ -57,6 +57,8 @@
                             <div class="dropdown-divider"></div>
                             <a class="dropdown-item" href="#" id = "displayPolitical">Political Boundaries</a>
                             <a class="dropdown-item" href="#" id = "displayContinent">Continent</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#" id = "displayPopulation">Population Density</a>
                             </div>
                         </div>
 
@@ -83,7 +85,7 @@
         
         <script>
             const blackMaterial = new THREE.MeshStandardMaterial( {
-                color: 0x222222,
+                color: 0x020202,
                 opacity: 1
             });
 
@@ -92,7 +94,6 @@
                 opacity: .1,
                 depthWrite: false
             } );
-
 
             //For calculating xyz from lat and long:
             function LatLonXYZ(coords,radius){
@@ -105,12 +106,22 @@
                 let y = ((radius) * Math.cos(phi));
                 return [x,y,z];
             }
+
+
             //Fetch the world point data from github: 
             fetch("https://raw.githubusercontent.com/LiamOsler/minijam/master/data/points.geojson")
             .then(response => {
                 return response.json();
             })
-            .then(jsondata =>{
+            .then(pointData =>{
+
+                fetch("https://raw.githubusercontent.com/LiamOsler/minijam/master/data/polys.geojson")
+                .then(response => {
+                    return response.json();
+                })
+                .then(polyData =>{
+                console.log(polyData);
+
                 //Basic scene and render setup, resize handler:
                 //Append render to document:
                 const renderer = new THREE.WebGLRenderer();
@@ -118,7 +129,55 @@
                 document.getElementById("three").appendChild( renderer.domElement );
 
 
+
                 const scene = new THREE.Scene();
+                scene.background = new THREE.Color( 0x111111 );
+                scene.fog = new THREE.Fog(0x111111, 200, 500);
+
+
+                const borderMaterial = new THREE.LineBasicMaterial({
+                    color: 0xffffff,
+                    linewidth: 1,
+                    linecap: 'round', //ignored by WebGLRenderer
+                    linejoin:  'round' //ignored by WebGLRenderer
+
+                });
+                function displayBorders(){
+                    for(let polygon of polyData.features){
+                        //console.log(polygon);
+                        if(polygon.geometry.type == "MultiPolygon"){
+                            for(let feature of polygon.geometry.coordinates){
+                                //console.log(subPoly)
+                                for(let subPoly of feature){
+                                    const linePoints = [];
+                                    for(let point of subPoly){
+                                        const pointCoords = LatLonXYZ(point, 100);
+                                        const pointVec = new THREE.Vector3(pointCoords[0], pointCoords[1], pointCoords[2]);
+                                        linePoints.push(pointVec);
+                                    }
+                                    const lineGeometry = new THREE.BufferGeometry().setFromPoints( linePoints );
+                                    const line = new THREE.Line( lineGeometry, borderMaterial );
+                                    scene.add(line);
+                                }
+                            }
+
+                        }
+                        else{
+                            for(let feature of polygon.geometry.coordinates){
+                                const linePoints = [];
+                                    for(let point of feature){
+                                        const pointCoords = LatLonXYZ(point, 100);
+                                        const pointVec = new THREE.Vector3(pointCoords[0], pointCoords[1], pointCoords[2]);
+                                        linePoints.push(pointVec);
+                                    }
+                                    const lineGeometry = new THREE.BufferGeometry().setFromPoints( linePoints );
+                                    const line = new THREE.Line( lineGeometry, borderMaterial );
+                                    scene.add(line);
+                            }
+                        }
+                    }
+                }
+
                 const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
                 const controls = new THREE.OrbitControls( camera, renderer.domElement );
                 controls.enablePan = false;
@@ -131,17 +190,6 @@
                 const raycaster = new THREE.Raycaster();
                 const pointer = new THREE.Vector2();
                 
-
-                // pointData: corresponds to 
-                const pointDataImport = jsondata;
-                let pointData = jsondata;
-                console.log(pointData);
-
-                //console.log(pointData);
-
-                // for (let point of pointDataImport.features){
-
-                // }
                 let pointArr = [];
 
                 const color = new THREE.Color();
@@ -168,42 +216,79 @@
                     }
                 }
 
+                //console.log(pointData.features);
                 function changePointColors(type){
                     const colors = [];
                     for (let point of pointData.features){
                         if(type == "political"){
                             switch(point.properties.mapcolor7){
                                 case 1: 
-                                    color.setRGB(253/256, 231/256, 37/256);
+                                    color.setRGB(256/256,0/256,256/256);
                                     colors.push(color.r, color.g, color.b);
                                 break;
                                 case 2: 
-                                    color.setRGB(144/256, 215/256, 67/256);
+                                    color.setRGB(0/256, 256/256, 256/256);
                                     colors.push(color.r, color.g, color.b);
                                 break;
                                 case 3: 
-                                    color.setRGB(53/256, 183/256, 121/256);
+                                    color.setRGB(256/256, 256/256, 0/256);
                                     colors.push(color.r, color.g, color.b);
                                 break;
                                 case 4: 
-                                    color.setRGB(33/256, 145/256, 140/256);
+                                    color.setRGB(0/256, 256/256, 0/256);
                                     colors.push(color.r, color.g, color.b);
                                 break;
                                 case 5: 
-                                    color.setRGB(49/256, 104/256, 142/256);
+                                    color.setRGB(64/256, 0/256, 256/256);
                                     colors.push(color.r, color.g, color.b);
                                 break;
                                 case 6: 
-                                    color.setRGB(49/256, 104/256, 142/256);
+                                    color.setRGB(256/256, 0/256, 0/256);
                                     colors.push(color.r, color.g, color.b);
                                 break;
                                 case 7: 
-                                    color.setRGB(68/256, 57/256, 131/256);
+                                    color.setRGB(256/256, 128/256, 256/256);
                                     colors.push(color.r, color.g, color.b);
                                 break;
                                 default:
-                                    color.setRGB(0,0,0);
+                                    color.setRGB(0/256, 0/256, 25/256);
                                     colors.push(color.r, color.g, color.b);
+                            }
+                        }
+                        else if(type == "continent"){
+                            switch(point.properties.continent){
+                                case "Europe":
+                                    color.setRGB(0/256, 256/256, 256/256);
+                                    colors.push(color.r, color.g, color.b); 
+                                break;
+                                case "Asia":
+                                    color.setRGB(256/256, 0/256, 256/256);
+                                    colors.push(color.r, color.g, color.b); 
+                                break;
+                                case "Africa":
+                                    color.setRGB(128/256, 128/256, 256/256);
+                                    colors.push(color.r, color.g, color.b); 
+                                break;
+                                case "North America":
+                                    color.setRGB(128/256, 128/256, 256/256);
+                                    colors.push(color.r, color.g, color.b); 
+                                break;
+                                case "South America":
+                                    color.setRGB(256/256, 0/256, 256/256);
+                                    colors.push(color.r, color.g, color.b); 
+                                break;
+                                case "Oceania":
+                                    color.setRGB(0/256, 256/256, 256/256);
+                                    colors.push(color.r, color.g, color.b); 
+                                break;
+                                case "Antarctica":
+                                    color.setRGB(256/256, 256/256, 256/256);
+                                    colors.push(color.r, color.g, color.b); 
+                                break;
+                                default:
+                                    color.setRGB(0,0,0.1);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
                             }
                         }
                         else if(type == "climate"){
@@ -241,56 +326,92 @@
                                     colors.push(color.r, color.g, color.b);
                                 break;
                                 case 9: 
-                                    color.setRGB(201/256, 176/256, 145/256);
+                                    color.setRGB(46/256, 120/256, 45/256);
                                     colors.push(color.r, color.g, color.b);
                                 break;
                                 case 10: 
-                                color.setRGB(153/256, 145/256, 133/256);
-                                colors.push(color.r, color.g, color.b);
+                                    color.setRGB(153/256, 145/256, 133/256);
+                                    colors.push(color.r, color.g, color.b);
                                 break;
                                 case 11: 
-                                color.setRGB(185/256, 174/256, 146/256);
-                                colors.push(color.r, color.g, color.b);
+                                    color.setRGB(185/256, 174/256, 146/256);
+                                    colors.push(color.r, color.g, color.b);
                                 break;
                                 case 12: 
-                                color.setRGB(85/256, 111/256, 81/256);
-                                colors.push(color.r, color.g, color.b);
+                                    color.setRGB(85/256, 111/256, 81/256);
+                                    colors.push(color.r, color.g, color.b);
                                 break;
                                 case 13: 
-                                color.setRGB(45/256, 90/256, 64/256);
-                                colors.push(color.r, color.g, color.b);
+                                    color.setRGB(45/256, 90/256, 64/256);
+                                    colors.push(color.r, color.g, color.b);
                                 break;
                                 case 14: 
-                                color.setRGB(58/256, 153/256, 78/256);
-                                colors.push(color.r, color.g, color.b);
+                                    color.setRGB(58/256, 153/256, 78/256);
+                                    colors.push(color.r, color.g, color.b);
                                 break;
                                 case 15: 
-                                color.setRGB(67/256, 76/256, 58/256);
-                                colors.push(color.r, color.g, color.b);
+                                    color.setRGB(67/256, 76/256, 58/256);
+                                    colors.push(color.r, color.g, color.b);
                                 break;
                                 case 16: 
-                                color.setRGB(87/256, 107/256, 83/256);
-                                colors.push(color.r, color.g, color.b);
+                                    color.setRGB(87/256, 107/256, 83/256);
+                                    colors.push(color.r, color.g, color.b);
                                 break;
                                 case 17: 
-                                color.setRGB(230/256, 218/256, 207/256);
-                                colors.push(color.r, color.g, color.b);
+                                    color.setRGB(230/256, 218/256, 207/256);
+                                    colors.push(color.r, color.g, color.b);
                                 break;
                                 case 18: 
-                                color.setRGB(63/256, 166/256, 85/256);
-                                colors.push(color.r, color.g, color.b);
+                                    color.setRGB(63/256, 166/256, 85/256);
+                                    colors.push(color.r, color.g, color.b);
                                 break;
                                 case 19: 
-                                color.setRGB(55/256, 85/256, 54/256);
-                                colors.push(color.r, color.g, color.b);
+                                    color.setRGB(55/256, 85/256, 54/256);
+                                    colors.push(color.r, color.g, color.b);
                                 break;
-                                // case : 
-                                // color.setRGB(256/256, 0/256, 0/256);
-                                // colors.push(color.r, color.g, color.b);
-                                // break;
-                            default:
-                                color.setRGB(0,0,0);
-                                colors.push(color.r, color.g, color.b);
+                                case 20: 
+                                    color.setRGB(25/256, 60/256, 27/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 21: 
+                                    color.setRGB(58/256, 82/256, 57/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 22: 
+                                    color.setRGB(36/256, 65/256, 60/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 23: 
+                                    color.setRGB(36/256, 67/256, 58/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 24: 
+                                    color.setRGB(256/256, 256/256, 256/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 25: 
+                                    color.setRGB(92/256, 108/256, 85/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 27: 
+                                    color.setRGB(125/256, 141/256, 109/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 28: 
+                                    color.setRGB(140/256, 140/256, 140/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 29: 
+                                    color.setRGB(140/256, 140/256, 140/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 30: 
+                                    color.setRGB(256/256, 0/256, 0/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                default:
+                                    color.setRGB(0,0,.1);
+                                    colors.push(color.r, color.g, color.b);
                             }
                         }
                         else if(type == "elevation"){
@@ -302,6 +423,19 @@
                             else{
                                 color.setRGB(0, 1-Math.abs(elevation)/5, 1-Math.abs(elevation/10));
                             }
+                            colors.push(color.r, color.g, color.b);
+                        }
+                        else if(type == "population"){
+
+                            let population_density = point.properties.population_density;
+                            if(population_density < 255){
+                                color.setRGB(population_density/256, population_density/256, population_density/256);
+                            }
+                            else{
+                                color.setRGB(0,0,0.1);
+                            }
+
+
                             colors.push(color.r, color.g, color.b);
                         }
                     }
@@ -318,16 +452,11 @@
                     scene.remove(pointObjs);
                 }
 
-                const geometry = new THREE.BoxGeometry();
-                const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-                const cube = new THREE.Mesh( geometry, material );
-                scene.add( cube );
-
                 const sphereGeometryFlat = new THREE.SphereGeometry( 100, 24, 24 );
                 const backgroundSphereFlat = new THREE.Mesh( sphereGeometryFlat, blackMaterial );
                 scene.add( backgroundSphereFlat );
 
-                const sphereGeometryElevation = new THREE.SphereGeometry( 95, 24, 24 );
+                const sphereGeometryElevation = new THREE.SphereGeometry( 94, 24, 24 );
                 const backgroundSphereElevation = new THREE.Mesh( sphereGeometryElevation, blackMaterial );
                 scene.add( backgroundSphereElevation );
 
@@ -339,12 +468,8 @@
                 scene.add( light );
 
                 function raycast(){
-                    // update the picking ray with the camera and pointer position
                     raycaster.setFromCamera( pointer, camera );
-
-                    // calculate objects intersecting the picking ray
                     const intersections = raycaster.intersectObjects( scene.children );
-
                     for(let intersect of intersections){
                         // console.log(controls.getDistance());
                         if(intersect.distance <controls.getDistance()-50){
@@ -360,7 +485,7 @@
                     renderer.render( scene, camera );
                 }
 
-                let requestedColor = "climate";
+                let requestedColor = "continent";
                 let requestedElevation = "flat";
 
                 function redisplayElevationColor(){
@@ -374,6 +499,9 @@
                 }
                 function redisplayContinentColor(){
                     requestedColor = "continent";
+                }
+                function redisplayPopulationColor(){
+                    requestedColor = "population";
                 }
                 function redisplayElevationOn(){
                     requestedElevation = "elevation";
@@ -395,6 +523,8 @@
                 displayClimateColor.addEventListener("click", redisplayClimateColor);
                 const displayContinentColor = document.getElementById("displayContinent");
                 displayContinentColor.addEventListener("click", redisplayContinentColor);
+                const displayPopulationColor = document.getElementById("displayPopulation");
+                displayPopulationColor.addEventListener("click", redisplayPopulationColor);
                 const displayElevationOn = document.getElementById("displayElevationOn");
                 displayElevationOn.addEventListener("click", redisplayElevationOn);
                 const displayElevationOff = document.getElementById("displayElevationOff");
@@ -411,9 +541,7 @@
                 function animate() {
                     requestAnimationFrame( animate );
                     controls.update();
-                    cube.rotation.x++;
                     raycast();
-   
                     redisplay();
                     renderer.render( scene, camera );
                 }
@@ -424,6 +552,7 @@
                     removePoints();
                     setPointLocations("elevation");
                     changePointColors("elevation");
+                    displayBorders();
                     displayPoints();
                 }
 
@@ -441,8 +570,9 @@
                     pointer.x = ( event.clientX / window.innerWidth ) * 2 - 1;
                     pointer.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
                 }
-            }
-            );
+            });
+        });
+        
         </script>
 
         <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
