@@ -17,45 +17,64 @@
             z-index: 0; 
         }
 
-        #container {
+        #background {
             position: relative;
             z-index: 0;
         }
         
         #three {
             position: absolute;
-            z-index: 1;
             cursor: none;
         }
 
         #overlay {
-            position: absolute;
-            z-index: 2;
             width: 100%;
-            padding-left: 1em;
+            position: absolute;           
         }
 
     </style>
 </head>
     <body>
-        <div id="container">
+        <div id="background">
             <div id="three"></div>
             <div id="overlay">
-                <div class="container-fluid">
-                    <!-- Content here -->
-                    <div class = "row pt-4">
-                        <div class = "col-12">
-                            <div class="card text-white bg-dark" style="width: 18rem;">
-                                <div class="card-body">
-                                  <h5 class="card-title">Card title</h5>
-                                  <p class="card-text">Some quick example text to build on the card title and make up the bulk of the card's content.</p>
-                                  <a href="#" class="btn btn-light">Go somewhere</a>
-                                </div>
-                              </div>
+                <div class = "container-xl">
+                    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+                        <a class="navbar-brand" href="#">
+                        Fleet Command
+                        </a>
+                        <div class="btn-group px-2">
+                            <button type="button" class="btn btn-light dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-expanded="false">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-map-fill" viewBox="0 0 16 16">
+                                    <path fill-rule="evenodd" d="M16 .5a.5.5 0 0 0-.598-.49L10.5.99 5.598.01a.5.5 0 0 0-.196 0l-5 1A.5.5 0 0 0 0 1.5v14a.5.5 0 0 0 .598.49l4.902-.98 4.902.98a.502.502 0 0 0 .196 0l5-1A.5.5 0 0 0 16 14.5V.5zM5 14.09V1.11l.5-.1.5.1v12.98l-.402-.08a.498.498 0 0 0-.196 0L5 14.09zm5 .8V1.91l.402.08a.5.5 0 0 0 .196 0L11 1.91v12.98l-.5.1-.5-.1z"/>
+                                </svg>
+                                Map
+                                <span class="sr-only">Toggle Dropdown</span>
+                            </button>
+                            <div class="dropdown-menu">
+                            <a class="dropdown-item" href="#" id = "displayElevationColor">Surface Elevation</a>
+                            <a class="dropdown-item" href="#" id = "displayClimate">Climate Type</a>
+                            <div class="dropdown-divider"></div>
+                            <a class="dropdown-item" href="#" id = "displayPolitical">Political Boundaries</a>
+                            <a class="dropdown-item" href="#" id = "displayContinent">Continent</a>
+                            </div>
                         </div>
-                    </div>
-                </div>
 
+                        <div class="btn-group ">
+                            <button type="button" class="btn btn-light dropdown-toggle dropdown-toggle-split" data-toggle="dropdown" aria-expanded="false">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-rulers" viewBox="0 0 16 16">
+                                    <path d="M1 0a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5v-1H2v-1h4v-1H4v-1h2v-1H2v-1h4V9H4V8h2V7H2V6h4V2h1v4h1V4h1v2h1V2h1v4h1V4h1v2h1V2h1v4h1V1a1 1 0 0 0-1-1H1z"/>
+                                </svg>
+                                Elevation
+                                <span class="sr-only">Toggle Dropdown</span>
+                            </button>
+                            <div class="dropdown-menu">
+                            <a class="dropdown-item" href="#" id = "displayElevationOn">On</a>
+                            <a class="dropdown-item" href="#" id = "displayElevationOff">Off</a>
+                            </div>
+                        </div>
+                    </nav>
+                </div>
             </div>
         </div>
 
@@ -73,6 +92,7 @@
                 opacity: .1,
                 depthWrite: false
             } );
+
 
             //For calculating xyz from lat and long:
             function LatLonXYZ(coords,radius){
@@ -95,7 +115,7 @@
                 //Append render to document:
                 const renderer = new THREE.WebGLRenderer();
                 renderer.setSize( window.innerWidth, window.innerHeight );
-                document.body.appendChild( renderer.domElement );
+                document.getElementById("three").appendChild( renderer.domElement );
 
 
                 const scene = new THREE.Scene();
@@ -115,11 +135,12 @@
                 // pointData: corresponds to 
                 const pointDataImport = jsondata;
                 let pointData = jsondata;
-
                 console.log(pointData);
 
+                //console.log(pointData);
+
                 // for (let point of pointDataImport.features){
-                //     pointData.push(point);
+
                 // }
                 let pointArr = [];
 
@@ -150,7 +171,7 @@
                 function changePointColors(type){
                     const colors = [];
                     for (let point of pointData.features){
-                        if(type == "default"){
+                        if(type == "political"){
                             switch(point.properties.mapcolor7){
                                 case 1: 
                                     color.setRGB(253/256, 231/256, 37/256);
@@ -185,12 +206,92 @@
                                     colors.push(color.r, color.g, color.b);
                             }
                         }
-                        else if(type == "country"){
-                            color.setRGB(1,1,1);
-                            colors.push(color.r, color.g, color.b);
-                        }
                         else if(type == "climate"){
-                        
+                            switch(point.properties.climate){
+                                case 1: 
+                                    color.setRGB(106/256, 119/256, 104/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 2: 
+                                    color.setRGB(200/256, 200/256, 200/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 3: 
+                                    color.setRGB(58/256, 150/256, 75/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 4: 
+                                    color.setRGB(124/256, 127/256, 104/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 5: 
+                                    color.setRGB(191/256, 169/256, 144/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 6: 
+                                    color.setRGB(80/256, 106/256, 73/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 7: 
+                                    color.setRGB(255/256, 255/256, 256/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 8: 
+                                    color.setRGB(46/256, 76/256, 45/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 9: 
+                                    color.setRGB(201/256, 176/256, 145/256);
+                                    colors.push(color.r, color.g, color.b);
+                                break;
+                                case 10: 
+                                color.setRGB(153/256, 145/256, 133/256);
+                                colors.push(color.r, color.g, color.b);
+                                break;
+                                case 11: 
+                                color.setRGB(185/256, 174/256, 146/256);
+                                colors.push(color.r, color.g, color.b);
+                                break;
+                                case 12: 
+                                color.setRGB(85/256, 111/256, 81/256);
+                                colors.push(color.r, color.g, color.b);
+                                break;
+                                case 13: 
+                                color.setRGB(45/256, 90/256, 64/256);
+                                colors.push(color.r, color.g, color.b);
+                                break;
+                                case 14: 
+                                color.setRGB(58/256, 153/256, 78/256);
+                                colors.push(color.r, color.g, color.b);
+                                break;
+                                case 15: 
+                                color.setRGB(67/256, 76/256, 58/256);
+                                colors.push(color.r, color.g, color.b);
+                                break;
+                                case 16: 
+                                color.setRGB(87/256, 107/256, 83/256);
+                                colors.push(color.r, color.g, color.b);
+                                break;
+                                case 17: 
+                                color.setRGB(230/256, 218/256, 207/256);
+                                colors.push(color.r, color.g, color.b);
+                                break;
+                                case 18: 
+                                color.setRGB(63/256, 166/256, 85/256);
+                                colors.push(color.r, color.g, color.b);
+                                break;
+                                case 19: 
+                                color.setRGB(55/256, 85/256, 54/256);
+                                colors.push(color.r, color.g, color.b);
+                                break;
+                                // case : 
+                                // color.setRGB(256/256, 0/256, 0/256);
+                                // colors.push(color.r, color.g, color.b);
+                                // break;
+                            default:
+                                color.setRGB(0,0,0);
+                                colors.push(color.r, color.g, color.b);
+                            }
                         }
                         else if(type == "elevation"){
                             let elevation = point.properties.elevation /2000;
@@ -217,15 +318,18 @@
                     scene.remove(pointObjs);
                 }
 
-
                 const geometry = new THREE.BoxGeometry();
                 const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
                 const cube = new THREE.Mesh( geometry, material );
                 scene.add( cube );
 
-                const sphereGeometry = new THREE.SphereGeometry( 90, 24, 24 );
-                const backgroundSphere = new THREE.Mesh( sphereGeometry, blackMaterial );
-                scene.add( backgroundSphere );
+                const sphereGeometryFlat = new THREE.SphereGeometry( 100, 24, 24 );
+                const backgroundSphereFlat = new THREE.Mesh( sphereGeometryFlat, blackMaterial );
+                scene.add( backgroundSphereFlat );
+
+                const sphereGeometryElevation = new THREE.SphereGeometry( 95, 24, 24 );
+                const backgroundSphereElevation = new THREE.Mesh( sphereGeometryElevation, blackMaterial );
+                scene.add( backgroundSphereElevation );
 
                 const cursorGeometry = new THREE.SphereGeometry( 1 , 24, 24 );
                 const cursorSphere = new THREE.Mesh( cursorGeometry, whiteMaterial );
@@ -233,7 +337,6 @@
 
                 const light = new THREE.AmbientLight( 0xffffff ); // soft white light
                 scene.add( light );
-
 
                 function raycast(){
                     // update the picking ray with the camera and pointer position
@@ -251,12 +354,57 @@
                                 cursorSphere.position.x = pointArr[index*3];
                                 cursorSphere.position.y = pointArr[index*3+1];
                                 cursorSphere.position.z = pointArr[index*3+2];
-
                             }
                         }
-
                     }
                     renderer.render( scene, camera );
+                }
+
+                let requestedColor = "climate";
+                let requestedElevation = "flat";
+
+                function redisplayElevationColor(){
+                    requestedColor = "elevation";
+                }
+                function redisplayPoliticalColor(){
+                    requestedColor = "political";
+                }
+                function redisplayClimateColor(){
+                    requestedColor = "climate";
+                }
+                function redisplayContinentColor(){
+                    requestedColor = "continent";
+                }
+                function redisplayElevationOn(){
+                    requestedElevation = "elevation";
+                    scene.remove( backgroundSphereElevation );
+                    scene.remove( backgroundSphereFlat );
+                    scene.add( backgroundSphereElevation );
+                }
+                function redisplayElevationOff(){
+                    requestedElevation = "flat";
+                    scene.remove( backgroundSphereElevation );
+                    scene.remove( backgroundSphereFlat );
+                    scene.add( backgroundSphereFlat );
+                }
+                const displayElevationColor = document.getElementById("displayElevationColor");
+                displayElevationColor.addEventListener("click", redisplayElevationColor);
+                const displayPoliticalColor = document.getElementById("displayPolitical");
+                displayPoliticalColor.addEventListener("click", redisplayPoliticalColor);
+                const displayClimateColor = document.getElementById("displayClimate");
+                displayClimateColor.addEventListener("click", redisplayClimateColor);
+                const displayContinentColor = document.getElementById("displayContinent");
+                displayContinentColor.addEventListener("click", redisplayContinentColor);
+                const displayElevationOn = document.getElementById("displayElevationOn");
+                displayElevationOn.addEventListener("click", redisplayElevationOn);
+                const displayElevationOff = document.getElementById("displayElevationOff");
+                displayElevationOff.addEventListener("click", redisplayElevationOff);
+
+                function redisplay(){
+                    removePoints();
+                    setPointLocations(requestedElevation);
+                    changePointColors(requestedColor);
+                    displayPoints();
                 }
 
                 
@@ -265,25 +413,15 @@
                     controls.update();
                     cube.rotation.x++;
                     raycast();
-                    // if(cube.rotation.x == 100){
-                    //     removePoints();
-                    //     setPointLocations("flat");
-                    //     changePointColors("elevation");
-                    //     displayPoints();
-                    // }
-
-                        removePoints();
-                        setPointLocations("elevation");
-                        changePointColors("elevation");
-                        displayPoints();
-                    
-
+   
+                    redisplay();
                     renderer.render( scene, camera );
                 }
 
                 function init(){
                     window.addEventListener('resize', onWindowResize, false);
                     window.addEventListener( 'pointermove', onPointerMove );
+                    removePoints();
                     setPointLocations("elevation");
                     changePointColors("elevation");
                     displayPoints();
