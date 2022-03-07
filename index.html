@@ -107,7 +107,6 @@
                 return [x,y,z];
             }
 
-
             //Fetch the world point data from github: 
             fetch("https://raw.githubusercontent.com/LiamOsler/minijam/master/data/points.geojson")
             .then(response => {
@@ -120,7 +119,7 @@
                     return response.json();
                 })
                 .then(polyData =>{
-                console.log(polyData);
+                //console.log(polyData);
 
                 //Basic scene and render setup, resize handler:
                 //Append render to document:
@@ -128,11 +127,43 @@
                 renderer.setSize( window.innerWidth, window.innerHeight );
                 document.getElementById("three").appendChild( renderer.domElement );
 
+                let pointDataRaw = pointData;
+                console.log(pointDataRaw);
 
 
                 const scene = new THREE.Scene();
                 scene.background = new THREE.Color( 0x111111 );
                 scene.fog = new THREE.Fog(0x111111, 200, 500);
+
+                
+                const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
+                const controls = new THREE.OrbitControls( camera, renderer.domElement );
+                controls.enablePan = false;
+                controls.maxDistance = 400;
+                controls.minDistance = 120;
+
+                camera.position.set( 0, 0, 150 );
+                controls.update();
+
+                const raycaster = new THREE.Raycaster();
+                const pointer = new THREE.Vector2();
+
+                //Create a closed wavey loop
+                const curve = new THREE.CatmullRomCurve3( [
+                    new THREE.Vector3( -150, 0, 100 ),
+                    new THREE.Vector3( -150, 5, 150 ),
+                    new THREE.Vector3( 0, 0, 0 ),
+                    new THREE.Vector3( 5, -5, 5 ),
+                    new THREE.Vector3( 10, 0, 10 )
+                ] );
+
+                const points = curve.getPoints( 50 );
+                const geometry = new THREE.BufferGeometry().setFromPoints( points );
+                const material = new THREE.LineBasicMaterial( { color: 0xff0000 } );
+
+                // Create the final object to add to the scene
+                const curveObject = new THREE.Line( geometry, material );
+                scene.add(curveObject);
 
 
                 const borderMaterial = new THREE.LineBasicMaterial({
@@ -178,17 +209,6 @@
                     }
                 }
 
-                const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
-                const controls = new THREE.OrbitControls( camera, renderer.domElement );
-                controls.enablePan = false;
-                controls.maxDistance = 400;
-                controls.minDistance = 120;
-
-                camera.position.set( 0, 0, 150 );
-                controls.update();
-
-                const raycaster = new THREE.Raycaster();
-                const pointer = new THREE.Vector2();
                 
                 let pointArr = [];
 
@@ -485,7 +505,7 @@
                     renderer.render( scene, camera );
                 }
 
-                let requestedColor = "continent";
+                let requestedColor = "population";
                 let requestedElevation = "flat";
 
                 function redisplayElevationColor(){
@@ -530,25 +550,74 @@
                 const displayElevationOff = document.getElementById("displayElevationOff");
                 displayElevationOff.addEventListener("click", redisplayElevationOff);
 
-                function redisplay(){
+                function redisplayPoints(){
                     removePoints();
                     setPointLocations(requestedElevation);
                     changePointColors(requestedColor);
                     displayPoints();
                 }
 
+
                 
                 function animate() {
                     requestAnimationFrame( animate );
                     controls.update();
                     raycast();
-                    redisplay();
+                    redisplayPoints();
                     renderer.render( scene, camera );
+                }
+
+                let keys = {
+                    "left" :false,
+                    "right" : false,
+                    "up" : false,
+                    "down" : false,
+                    "space" : false,
+                    "w" : false,
+                    "a" : false,
+                    "s" : false,
+                    "d" : false,
+                }
+                function keyDownHandler(event) {
+                    if(event.keyCode == 39) {
+                        keys.left = true;
+                    }
+                    else if(event.keyCode == 37) {
+                        keys.right = true;
+                    }
+                    if(event.keyCode == 40) {
+                        keys.down = true;
+                    }
+                    else if(event.keyCode == 38) {
+                        keys.up = true;
+                    }
+                    if(event.keyCode == 32) {
+                        keys.space = true;
+                    }
+                }
+                function keyUpHandler(event) {
+                    if(event.keyCode == 39) {
+                        keys.left = false;
+                    }
+                    else if(event.keyCode == 37) {
+                        keys.right = false;
+                    }
+                    if(event.keyCode == 40) {
+                        keys.down = false;
+                    }
+                    else if(event.keyCode == 38) {
+                        keys.up = false;
+                    }
+                    if(event.keyCode == 32) {
+                        keys.space = false;
+                    }
                 }
 
                 function init(){
                     window.addEventListener('resize', onWindowResize, false);
                     window.addEventListener( 'pointermove', onPointerMove );
+                    window.addEventListener('keydown', keyDownHandler, false);
+                    window.addEventListener('keyup', keyUpHandler, false);
                     removePoints();
                     setPointLocations("elevation");
                     changePointColors("elevation");
