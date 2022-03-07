@@ -27,9 +27,16 @@
             cursor: none;
         }
 
-        #overlay {
+        .overlay {
             width: 100%;
+            height: 100%;
             position: absolute;           
+        }
+
+        #info-card{
+            position: fixed;
+            right:1em;
+            top:5em;
         }
 
     </style>
@@ -37,7 +44,7 @@
     <body>
         <div id="background">
             <div id="three"></div>
-            <div id="overlay">
+            <div class ="overlay">
                 <div class = "container-xl">
                     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
                         <a class="navbar-brand" href="#">
@@ -78,6 +85,18 @@
                     </nav>
                 </div>
             </div>
+
+            <div class = "overlay">
+                <div id = "info-card" class="card text-white bg-dark mb-3" style="max-width: 18rem;">
+                    <div class="card-header">Info</div>
+                    <div class="card-body">
+                        <h5 id = "cardTitle" class="card-title">Placement Stage</h5>
+                        <p id = "cardText" class="card-text">Place radars at the cursor position by pressing the space bar </p>
+                        <p id = "cardTextCount" class="card-text">5 radars remaining</p>
+
+                    </div>
+                </div>
+            </div>
         </div>
 
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -93,7 +112,19 @@
                 color: 0xffffff,
                 opacity: .1,
                 depthWrite: false
-            } );
+            });
+
+            const borderMaterial = new THREE.LineBasicMaterial({
+                color: 0xffffff,
+                linewidth: 1,
+                linecap: 'round', 
+                linejoin:  'round'
+            });
+
+            let cardTitle = document.getElementById("cardTitle");
+            let cardText = document.getElementById("cardText");
+            let cardTextCount = document.getElementById("cardTextCount");
+
 
             //For calculating xyz from lat and long:
             function LatLonXYZ(coords,radius){
@@ -113,7 +144,7 @@
                 return response.json();
             })
             .then(pointData =>{
-
+                //Fetch the world border data from github:
                 fetch("https://raw.githubusercontent.com/LiamOsler/minijam/master/data/polys.geojson")
                 .then(response => {
                     return response.json();
@@ -128,7 +159,7 @@
                 document.getElementById("three").appendChild( renderer.domElement );
 
                 let pointDataRaw = pointData;
-                console.log(pointDataRaw);
+                //console.log(pointDataRaw);
 
 
                 const scene = new THREE.Scene();
@@ -148,31 +179,7 @@
                 const raycaster = new THREE.Raycaster();
                 const pointer = new THREE.Vector2();
 
-                //Create a closed wavey loop
-                const curve = new THREE.CatmullRomCurve3( [
-                    new THREE.Vector3( -150, 0, 100 ),
-                    new THREE.Vector3( -150, 5, 150 ),
-                    new THREE.Vector3( 0, 0, 0 ),
-                    new THREE.Vector3( 5, -5, 5 ),
-                    new THREE.Vector3( 10, 0, 10 )
-                ] );
 
-                const points = curve.getPoints( 50 );
-                const geometry = new THREE.BufferGeometry().setFromPoints( points );
-                const material = new THREE.LineBasicMaterial( { color: 0xff0000 } );
-
-                // Create the final object to add to the scene
-                const curveObject = new THREE.Line( geometry, material );
-                scene.add(curveObject);
-
-
-                const borderMaterial = new THREE.LineBasicMaterial({
-                    color: 0xffffff,
-                    linewidth: 1,
-                    linecap: 'round', //ignored by WebGLRenderer
-                    linejoin:  'round' //ignored by WebGLRenderer
-
-                });
                 function displayBorders(){
                     for(let polygon of polyData.features){
                         //console.log(polygon);
@@ -557,10 +564,90 @@
                     displayPoints();
                 }
 
+                function addCurve(){
+                    //Create a closed wavey loop
+                    const curve = new THREE.CatmullRomCurve3( [
+                        new THREE.Vector3( -100, 0,0 ),
+                        new THREE.Vector3(  100, 100, 0 ),
+                        new THREE.Vector3(  100, 0, 0 ),
+
+                    ] );
+
+                    const points = curve.getPoints( 50 );
+                    const geometry = new THREE.BufferGeometry().setFromPoints( points );
+                    const material = new THREE.LineBasicMaterial( { color: 0xff0000 } );
+
+                    // Create the final object to add to the scene
+                    const curveObject = new THREE.Line( geometry, material );
+                    scene.add(curveObject);
+
+                }
+                
+                function placeRadarUnit(){
+                    const geometry = new THREE.ConeGeometry(
+                            24, // radius
+                            2, // height
+                            8, //radial segments,
+                            1, // height segments
+                            true, // open ended or capped, false means capped
+                            0, // start angle
+                            Math.PI*2 // angle length from start
+                        );
+                    const radarMaterial = new THREE.MeshStandardMaterial({
+                        color: 0xffffff,
+                        wireframe: true,
+                    });
+                    geometry.openEnded = true;
+                    const cone = new THREE.Mesh( geometry, radarMaterial );
+                    cone.position.x = cursorSphere.position.x;
+                    cone.position.y = cursorSphere.position.y;
+                    cone.position.z = cursorSphere.position.z;
+                    cone.lookAt(0,0,0);
+                    cone.rotateZ(Math.PI);
+                    cone.rotateX(Math.PI/2);
+                    scene.add( cone );
+
+                    player.unitsPlaced++;
+                    player.unitLocations.push([cone.position.x, cone.position.y, cone.position.z]);
+
+                    const radarUnitGeometry = new THREE.SphereGeometry( 2, 32, 16 );
+                    const material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
+                    const sphere = new THREE.Mesh( radarUnitGeometry, material );
+                    sphere.position.x = cursorSphere.position.x;
+                    sphere.position.y = cursorSphere.position.y;
+                    sphere.position.z = cursorSphere.position.z;
+                    scene.add( sphere );
+                }
+
+                let player = {
+                    "unitsPlaced" : 0,
+                    "unitsRemaining" : 5,
+                    "radarsRemaining" : 5,
+                    "silosRemaining" : 5,
+                    "airbasesRemaining" : 5,
+                    "unitType" : [],
+                    "unitLocations" : []
+                }
+
+
+                function gameManager(){
+                    if(keys.space == true){
+                        if(keys.spaceToggle == true){
+                            if(player.radarsRemaining > 0){
+                                placeRadarUnit()
+                                player.unitsPlaced++;
+                                player.unitsRemaining--;
+                                player.radarsRemaining--;
+                            }
+                        }
+                        keys.spaceToggle = false;
+                    }
+                }
 
                 
                 function animate() {
                     requestAnimationFrame( animate );
+                    gameManager();
                     controls.update();
                     raycast();
                     redisplayPoints();
@@ -573,6 +660,7 @@
                     "up" : false,
                     "down" : false,
                     "space" : false,
+                    "spaceToggle": false,
                     "w" : false,
                     "a" : false,
                     "s" : false,
@@ -610,6 +698,7 @@
                     }
                     if(event.keyCode == 32) {
                         keys.space = false;
+                        keys.spaceToggle = true;
                     }
                 }
 
