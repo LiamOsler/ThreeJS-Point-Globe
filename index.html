@@ -37,6 +37,13 @@
             position: fixed;
             right:1em;
             top:5em;
+            width: 18em;
+        }
+        #setup-card{
+            position: fixed;
+            min-width: 18rem;
+            bottom: 1em;
+            left: 1em;
         }
 
     </style>
@@ -87,13 +94,32 @@
             </div>
 
             <div class = "overlay">
-                <div id = "info-card" class="card text-white bg-dark mb-3" style="max-width: 18rem;">
-                    <div class="card-header">Info</div>
+                <div id = "info-card" class="card text-white bg-dark mb-3">
                     <div class="card-body">
                         <h5 id = "cardTitle" class="card-title">Placement Stage</h5>
                         <p id = "cardText" class="card-text">Place radars at the cursor position by pressing the space bar </p>
                         <p id = "cardTextCount" class="card-text">5 radars remaining</p>
+                    </div>
+                </div>
+            </div>
 
+            <div class = "overlay">
+                <div id = "setup-card" class="card text-white bg-dark mb-3" >
+                    <div class="card-body">
+                        <h5  class="card-title">Setup</h5>
+                        <p id = "cardText" class="card-text">Select your territory</p>
+                        <div class="form-group">
+                            <select id = "territorySelect" class="form-control" >
+                                <option selected="true" disabled="disabled" >Select</option>
+                                <option>Africa</option>
+                                <option>North America</option>
+                                <option>South America</option>
+                                <option>Asia</option>
+                                <option>Europe</option>
+                                <option>Oceania</option>
+
+                            </select>
+                          </div>
                     </div>
                 </div>
             </div>
@@ -109,7 +135,13 @@
             });
 
             const whiteMaterial = new THREE.MeshStandardMaterial( {
-                color: 0xffffff,
+                color: 0xeeeeee,
+                opacity: .1,
+                depthWrite: false
+            });
+
+            const siloMaterial = new THREE.MeshStandardMaterial( {
+                color: 0xff0000,
                 opacity: .1,
                 depthWrite: false
             });
@@ -119,6 +151,15 @@
                 linewidth: 1,
                 linecap: 'round', 
                 linejoin:  'round'
+            });
+
+            const radarMaterial = new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                opacity: .05,
+                depthWrite: false,
+                depthTest: false,
+
+                transparent: true
             });
 
             let cardTitle = document.getElementById("cardTitle");
@@ -166,6 +207,10 @@
                 scene.background = new THREE.Color( 0x111111 );
                 scene.fog = new THREE.Fog(0x111111, 200, 500);
 
+                const topLight = new THREE.PointLight( 0xff0000, 1, 100 );
+                topLight.position.set( 150, 0, 0 );
+                scene.add( topLight );
+
                 
                 const camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 10000 );
                 const controls = new THREE.OrbitControls( camera, renderer.domElement );
@@ -176,10 +221,7 @@
                 camera.position.set( 0, 0, 150 );
                 controls.update();
 
-                const raycaster = new THREE.Raycaster();
                 const pointer = new THREE.Vector2();
-
-
                 function displayBorders(){
                     for(let polygon of polyData.features){
                         //console.log(polygon);
@@ -215,6 +257,9 @@
                         }
                     }
                 }
+
+                let territorySelect = document.getElementById("territorySelect");
+                console.log(territorySelect.options[territorySelect.selectedIndex].value);
 
                 
                 let pointArr = [];
@@ -494,15 +539,16 @@
                 const light = new THREE.AmbientLight( 0xffffff ); // soft white light
                 scene.add( light );
 
+                const raycaster = new THREE.Raycaster();
+                let cursorPointData;
                 function raycast(){
                     raycaster.setFromCamera( pointer, camera );
                     const intersections = raycaster.intersectObjects( scene.children );
                     for(let intersect of intersections){
-                        // console.log(controls.getDistance());
                         if(intersect.distance <controls.getDistance()-50){
                             if(intersect.object.type == "Points"){
                                 let index = intersect.index;
-                                // console.log(intersect);
+                                cursorPointData = pointData.features[intersect.index];
                                 cursorSphere.position.x = pointArr[index*3];
                                 cursorSphere.position.y = pointArr[index*3+1];
                                 cursorSphere.position.z = pointArr[index*3+2];
@@ -584,32 +630,6 @@
                 }
                 
                 function placeRadarUnit(){
-                    const geometry = new THREE.ConeGeometry(
-                            24, // radius
-                            2, // height
-                            8, //radial segments,
-                            1, // height segments
-                            true, // open ended or capped, false means capped
-                            0, // start angle
-                            Math.PI*2 // angle length from start
-                        );
-                    const radarMaterial = new THREE.MeshStandardMaterial({
-                        color: 0xffffff,
-                        wireframe: true,
-                    });
-                    geometry.openEnded = true;
-                    const cone = new THREE.Mesh( geometry, radarMaterial );
-                    cone.position.x = cursorSphere.position.x;
-                    cone.position.y = cursorSphere.position.y;
-                    cone.position.z = cursorSphere.position.z;
-                    cone.lookAt(0,0,0);
-                    cone.rotateZ(Math.PI);
-                    cone.rotateX(Math.PI/2);
-                    scene.add( cone );
-
-                    player.unitsPlaced++;
-                    player.unitLocations.push([cone.position.x, cone.position.y, cone.position.z]);
-
                     const radarUnitGeometry = new THREE.SphereGeometry( 2, 32, 16 );
                     const material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
                     const sphere = new THREE.Mesh( radarUnitGeometry, material );
@@ -617,30 +637,136 @@
                     sphere.position.y = cursorSphere.position.y;
                     sphere.position.z = cursorSphere.position.z;
                     scene.add( sphere );
+
+                    const coneGeometry = new THREE.ConeGeometry(
+                            24, // radius
+                            2, // height
+                            32, //radial segments,
+                            1, // height segments
+                            true, // open ended or capped, false means capped
+                            0, // start angle
+                            Math.PI*2 // angle length from start
+                        );
+                    const cone = new THREE.Mesh( coneGeometry, radarMaterial );
+                    cone.position.x = cursorSphere.position.x;
+                    cone.position.y = cursorSphere.position.y;
+                    cone.position.z = cursorSphere.position.z;
+                    cone.lookAt(0,0,0);
+                    cone.rotateZ(Math.PI);
+                    cone.rotateX(Math.PI/2);
+                    cone.material.side = THREE.DoubleSide;
+                    scene.add( cone );
+
+                    player.unitType.push("radar");
+                    player.unitLocations.push([cone.position.x, cone.position.y, cone.position.z]);
+                    player.unitLatLon.push(cursorPointData.geometry.coordinates);
+                    console.log(cursorPointData);
                 }
 
+                                
+                function placeSiloUnit(){
+                    const coneGeometry = new THREE.ConeGeometry(
+                            2, // radius
+                            2, // height
+                            4, //radial segments,
+                            1, // height segments
+                            false, // open ended or capped, false means capped
+                            0, // start angle
+                            Math.PI*2 // angle length from start
+                        );
+                    const cone = new THREE.Mesh( coneGeometry, siloMaterial );
+                    cone.position.x = cursorSphere.position.x;
+                    cone.position.y = cursorSphere.position.y;
+                    cone.position.z = cursorSphere.position.z;
+                    cone.lookAt(0,0,0);
+                    cone.rotateX(-Math.PI/2);
+                    cone.rotateY(-Math.PI/2);
+                    scene.add( cone );
+
+                    player.unitType.push("silo");
+                    player.unitLocations.push([cone.position.x, cone.position.y, cone.position.z]);
+
+                }
+                let setupcard = document.getElementById("setup-card");
+                let placementStage = "setup";
                 let player = {
+                    "country" : "",
+                    "continent" : "",
                     "unitsPlaced" : 0,
                     "unitsRemaining" : 5,
                     "radarsRemaining" : 5,
                     "silosRemaining" : 5,
                     "airbasesRemaining" : 5,
                     "unitType" : [],
-                    "unitLocations" : []
+                    "unitLocations" : [],
+                    "unitLatLon" : []
+
                 }
 
-
                 function gameManager(){
-                    if(keys.space == true){
-                        if(keys.spaceToggle == true){
-                            if(player.radarsRemaining > 0){
-                                placeRadarUnit()
-                                player.unitsPlaced++;
-                                player.unitsRemaining--;
-                                player.radarsRemaining--;
-                            }
+                    let territory = territorySelect.options[territorySelect.selectedIndex].value;
+                    territory = "Europe"
+                    if( territory == "Select"){
+                        if(keys.space == true){
+                            cardText.innerText = "Territory not set - select a continent in the setup menu to begin";
                         }
-                        keys.spaceToggle = false;
+                    }
+                    else{
+                        placementStage = "radar"
+                        setupcard.style.display = "none";
+                        player.continent = territory;
+                        if(player.radarsRemaining == 0 && placementStage == "radar"){
+                            cardTitle.innerText = "Silo Placement";
+                            cardText.innerText = "Place silos at the cursor position by pressing the spacebar";
+                            cardTextCount.innerText = player.silosRemaining + " silos remaining";
+                        }
+                        if(player.silosRemaining == 0 && placementStage == "silos"){
+                            cardTitle.innerText = "Nuke Targeting";
+                            cardText.innerText = "Designate Targets by pressing the space bar";
+                            cardTextCount.innerText = player.silosRemaining + " silos remaining";
+                        }
+
+                        if(keys.space == true){
+                            if(keys.spaceToggle == true){
+                                if(cursorPointData.properties.continent == player.continent){
+                                        if(player.radarsRemaining > 0){
+                                            cardTitle.innerText = "Radar Placement";
+                                            placeRadarUnit();
+                                            player.unitsPlaced++;
+                                            player.unitsRemaining--;
+                                            player.radarsRemaining--;
+                                            if(player.radarsRemaining == 1){
+                                                cardTextCount.innerText = player.radarsRemaining + " radar remaining";
+                                            }
+                                            else{
+                                                cardTextCount.innerText = player.radarsRemaining + " radars remaining"
+                                            }
+                                        }
+                                        else if(player.silosRemaining > 0){
+                                            cardTitle.innerText = "Silo Placement";
+                                            placeSiloUnit()
+                                            player.unitsPlaced++;
+                                            player.unitsRemaining--;
+                                            player.silosRemaining--;
+
+                                            if(player.silosRemaining == 1){
+                                                cardTextCount.innerText = player.silosRemaining + " silo remaining";
+                                            }
+                                            else{
+                                                cardTextCount.innerText = player.silosRemaining + " silos remaining"
+                                            }
+
+                                        }
+                                    }
+                                    else if(player.continent == ""){
+                                        cardText.innerText = "Territory not set";
+                                    }
+                                    else{
+                                        cardText.innerText = "You must place in " + player.continent;
+                                    }   
+                                }
+                            keys.spaceToggle = false;
+                        }
                     }
                 }
 
